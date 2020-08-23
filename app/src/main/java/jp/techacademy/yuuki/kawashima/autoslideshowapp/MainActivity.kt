@@ -13,6 +13,7 @@ import kotlinx.android.synthetic.main.activity_main.*
 import android.view.View
 import android.os.Handler
 import android.widget.ImageView
+import android.util.*
 
 class MainActivity : AppCompatActivity(){
 
@@ -20,13 +21,13 @@ class MainActivity : AppCompatActivity(){
 
     private var mTimer: Timer? = null
     // タイマー用の時間のための変数
-    private var mTimerSec = 0.0
+    private var mCountNum = 0
     private var mHandler = Handler()
 
-    var imageUriArray = arrayListOf<Uri>()
+    private var imageUriArray = arrayListOf<Uri>()
 
     //カウンターの数字
-    var mCountNum = 0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,19 +53,27 @@ class MainActivity : AppCompatActivity(){
                         if(mTimer == null){
                             //タイマーの作成
                             mTimer =  Timer()
+                            start_button.run { this.text = "停止" }
+                            next_button.isClickable = false
+                            back_button.isClickable = false
 
                             //タイマーの始動
                             mTimer!!.schedule(object : TimerTask() {
                                 override fun run() {
-                                    mTimerSec += 0.1
+                                    mCountNum += 1
                                     mHandler.post {
-                                        textView.text = String.format("%.1f", mTimerSec)
+                                        val num = mCountNum % imageUriArray.size
+                                        imageView.setImageURI(imageUriArray[num])
+                                        textView.text = String.format("%d枚目を表示中", num + 1)
                                     }
                                 }
                             }, 2000, 2000)
                         }else{
                             mTimer!!.cancel()
                             mTimer = null
+                            start_button.run { this.text = "再生" }
+                            next_button.isClickable = true
+                            back_button.isClickable = true
                         }
                     }
                 }
@@ -74,6 +83,7 @@ class MainActivity : AppCompatActivity(){
                        mCountNum += 1
                        val num = mCountNum % imageUriArray.size
                        imageView.setImageURI(imageUriArray[num])
+                        textView.text = String.format("%d枚目を表示中", num + 1)
                     }else{
                         textView.text = String.format("写真へのアクセスを許可した後に，画像を1枚以上追加してください")
                     }
@@ -95,7 +105,9 @@ class MainActivity : AppCompatActivity(){
         when (requestCode) {
             PERMISSIONS_REQUEST_CODE ->
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getContentsInfo()
+                    Log.d("ANDROID", "許可された")
+                } else {
+                    Log.d("ANDROID", "許可されなかった")
                 }
         }
     }
@@ -115,6 +127,7 @@ class MainActivity : AppCompatActivity(){
                 val fieldIndex = cursor.getColumnIndex(MediaStore.Images.Media._ID)
                 val id = cursor.getLong(fieldIndex)
                 val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                imageUriArray.add(imageUri)
             } while (cursor.moveToNext())
         }
         imageView.setImageURI(imageUriArray[0])
